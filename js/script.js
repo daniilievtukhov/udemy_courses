@@ -102,4 +102,60 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
   setClock(".timer", deadline); //вызываем функцию
+
+  //МОДАЛЬНОЕ ОКНО
+  const contact = document.querySelectorAll("[data-modal]"), // получаем достап к кнопке
+    close = document.querySelector("[data-close]"), // получаем достап к кнопке закрытия в модальном окне
+    modal = document.querySelector(".modal"); // получаем достап к модальному окну
+
+  function openModal() {
+    modal.style.display = "block"; // меняем диспле=эй на блоковый
+    document.body.style.overflow = "hidden"; // запрещаем скролить страницу во время отображения модального окна
+    clearInterval(modalTimerId); // если пользователь сам откроет окно, то через несколько секунд, оно же вызываться не будет
+  }
+
+  contact.forEach((btn) => {
+    // циклом перебираем псевдомассив
+    btn.addEventListener("click", openModal);
+    // назначаем событие
+  });
+
+  function closeModal() {
+    if (modal.style.display == "block") {
+      // если модальное окно открыто
+      // назначаем событие при клике, должно окно закрываться
+      modal.style.display = "none";
+      document.body.style.overflow = "";
+    }
+  }
+  close.addEventListener("click", closeModal);
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+
+  // делаем чтоб при нажатии на клавишу, закрывалось окно
+  document.addEventListener("keydown", (e) => {
+    if (e.code === "Escape" && modal.style.display == "block") {
+      closeModal();
+    }
+  });
+
+  // МОДАЛЬНОЕ ОКНО БУДЕТ ВЫЗВАНО ЧЕРЕЗ ПРОМЕЖУТОК ВРЕМЕНИ
+
+  const modalTimerId = (openModal, 5000); // передаем функцию открытия окна через х сек. какой-то баг, если просто закоментить эту строку, вызыватья будет постоянно
+
+  function showModalByScroll() {
+    if (
+      window.pageYOffset + document.documentElement.clientHeight >=
+      document.documentElement.scrollHeight
+    ) {
+      openModal();
+      window.removeEventListener("scroll", showModalByScroll);
+    }
+  }
+
+  window.addEventListener("scroll", showModalByScroll);
 });
