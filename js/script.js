@@ -161,16 +161,26 @@ window.addEventListener("DOMContentLoaded", () => {
 
   //MenuCards add
   class MenuCard {
-    constructor(img, title, descr, price, parentSelector) {
+    constructor(img, title, descr, price, parentSelector, ...classes) {
       this.img = img;
       this.title = title;
       this.descr = descr;
       this.price = price;
       this.parentSelector = document.querySelector(parentSelector);
+      this.classes = classes;
     }
     createMenu() {
       const div = document.createElement("div");
-      div.innerHTML = `<div class="menu__item">
+      if (this.classes.length === 0) {
+        this.div = "menu__item";
+        div.classList.add(this.div);
+      } else {
+        this.classes.forEach((className) => div.classList.add(className));
+      }
+      this.classes.forEach((className) => {
+        div.classList.add(className);
+      });
+      div.innerHTML = `
       <img src=${this.img} alt="vegy" />
       <h3 class="menu__item-subtitle">Меню "${this.title}"</h3>
       <div class="menu__item-descr">
@@ -181,7 +191,7 @@ window.addEventListener("DOMContentLoaded", () => {
         <div class="menu__item-cost">Цена:</div>
         <div class="menu__item-total"><span>${this.price}</span> грн/день</div>
       </div>
-    </div>`;
+    `;
       this.parentSelector.append(div);
     }
   }
@@ -198,7 +208,9 @@ window.addEventListener("DOMContentLoaded", () => {
     "Премиум",
     "В меню 'Премиум' мы используем не только красивый дизайн упаковки, но и качественное исполнение блюд. Красная рыба, морепродукты, фрукты - ресторанное меню без похода в ресторан!",
     550,
-    ".menu .container"
+    ".menu .container",
+    "menu__item",
+    "big"
   ).createMenu();
 
   new MenuCard(
@@ -206,6 +218,74 @@ window.addEventListener("DOMContentLoaded", () => {
     "Постное",
     "Меню 'Постное' - это тщательный подбор ингредиентов: полное отсутствие продуктов животного происхождения, молоко из миндаля, овса, кокоса или гречки, правильное количество белков за счет тофу и импортных вегетарианских стейков.",
     430,
-    ".menu .container"
+    ".menu .container",
+    "menu__item",
+    "big"
   ).createMenu();
+
+  // Forms (отправка формы на сервер)
+
+  const forms = document.querySelectorAll("form"); // получаем доступ ко всем формам
+
+  const messages = {
+    // создаем фразы
+    load: "Загрузка",
+    success: "Спасибо! Скоро мы с вами свяжемся",
+    failure: " Что-то пошло не так...",
+  };
+
+  forms.forEach((item) => {
+    // берем все формы и под каждую из них подвязываем функцию postData
+    postData(item);
+  });
+
+  function postData(form) {
+    // создвем функцию поста формы с аргументом, чтоб легче было делать события
+    form.addEventListener("submit", (e) => {
+      // e-для того, чтоб мы отменили стандартное поведение браузера(после отправки перезагружать)
+      e.preventDefault();
+
+      let statusMessage = document.createElement("div"); //создаем див
+      statusMessage.classList.add("status"); // делаем ей класс
+      statusMessage.textContent = messages.load; // добавляем текст
+      form.append(statusMessage); //делаем так чтоб в браузере это сообщение было видно  сразу после отправки формы
+
+      const request = new XMLHttpRequest();
+      request.open("POST", "server.php");
+
+      //этот заголовок не надо  будет пустой массив от сервера  в связке XMLHttpRequest и FormData он будет установлен автоматически
+      //request.setRequestHeader("Content-type", "multipart/form-data"); //последний аргумент написали чтоб нормально работать с FormData
+      // если БЭКЭНД у нас в JSON- формате, то
+      request.setRequestHeader(
+        "Content-type",
+        "application/json; charset=utf-8"
+      );
+      const formData = new FormData(form); // специальный объект, который создает объект из того, что заполнил пользователь
+
+      const object = {};
+      formData.forEach(function (value, key) {
+        object[key] = value;
+      });
+      const json = JSON.stringify(object);
+      request.send(json);
+
+      //request.send(formData); // так как это POST-запрос, отправляем данные и в скобках что именно (formData)
+
+      request.addEventListener("load", () => {
+        // отслеживаем событие конечной загрузки запроса
+
+        if (request.status === 200) {
+          // если статус 200(ОК)
+          console.log(request.response);
+          statusMessage.textContent = messages.success; // какое сообщение выводить
+          form.reset(); //сбрасываем форму. будет удалено все что ввели
+          setTimeout(() => {
+            statusMessage.remove(); // и будет удалено сообщение через 2 секунды
+          }, 2000);
+        } else {
+          statusMessage.textContent = messages.failure;
+        }
+      });
+    });
+  }
 });
