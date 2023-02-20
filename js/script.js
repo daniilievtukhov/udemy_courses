@@ -250,42 +250,55 @@ window.addEventListener("DOMContentLoaded", () => {
       statusMessage.textContent = messages.load; // добавляем текст
       form.append(statusMessage); //делаем так чтоб в браузере это сообщение было видно  сразу после отправки формы
 
-      const request = new XMLHttpRequest();
-      request.open("POST", "server.php");
-
-      //этот заголовок не надо  будет пустой массив от сервера  в связке XMLHttpRequest и FormData он будет установлен автоматически
-      //request.setRequestHeader("Content-type", "multipart/form-data"); //последний аргумент написали чтоб нормально работать с FormData
-      // если БЭКЭНД у нас в JSON- формате, то
-      request.setRequestHeader(
-        "Content-type",
-        "application/json; charset=utf-8"
-      );
       const formData = new FormData(form); // специальный объект, который создает объект из того, что заполнил пользователь
 
+      //превращаем в json
       const object = {};
       formData.forEach(function (value, key) {
         object[key] = value;
       });
-      const json = JSON.stringify(object);
-      request.send(json);
 
-      //request.send(formData); // так как это POST-запрос, отправляем данные и в скобках что именно (formData)
-
-      request.addEventListener("load", () => {
-        // отслеживаем событие конечной загрузки запроса
-
-        if (request.status === 200) {
-          // если статус 200(ОК)
-          console.log(request.response);
+      fetch("server.php", {
+        method: "POST",
+        body: JSON.stringify(object),
+        headers: {
+          "Content-type": "application/json",
+        },
+      })
+        .then((data) => data.text()) // превращаем json в обычный текст
+        .then((data) => {
+          console.log(data); // data- данные из промиса
           statusMessage.textContent = messages.success; // какое сообщение выводить
           form.reset(); //сбрасываем форму. будет удалено все что ввели
-          setTimeout(() => {
-            statusMessage.remove(); // и будет удалено сообщение через 2 секунды
-          }, 2000);
-        } else {
+          statusMessage.remove();
+        })
+        .catch(() => {
+          // блок, который будет срабатывать на случай возникновения ошибки
           statusMessage.textContent = messages.failure;
-        }
-      });
+        })
+        .finally(() => {
+          //блок, который будет срабатывать в любом случае
+          form.reset(); // форма будет очищаться
+        });
     });
   }
+
+  // Fetch API (объеденение знаний про промисы и сервера)
+  // fetch(
+  //   "https://jsonplaceholder.typicode.com/posts" /* меняем вместо todos/1 на posts */,
+  //   {
+  //     //и объект
+  //     method: "POST", // прописываем какой метод запроса
+  //     body: JSON.stringify({ name: "Alex" }), // будем отправлять данные и например будет объект с свойством name
+  //     headers: { //заголовок, который будет определять, какой контент мы отправляем
+  //       "Content-type": "application/json",
+  //     },
+  //   }
+  // ) //туда, куда посылаем запрос
+  //   .then((response) => response.json()) // fetch работает с промисами  получаем ответ в json виде и трансформируем в нормальный объект и response.json() возвращает промис
+  //   .then((json) => console.log(json)); // если все успешно прошло, то берем этот сконвертированный объект и используем его в консоли
+
+  fetch("http://localhost:3000/menu") //отсюда возвращается промис, поэтому
+    .then((data) => data.json()) // берем data- что возвращает промис и превращаем его в обычный js-объект
+    .then((res) => console.log(res)); // и выводим полученный результат
 });
