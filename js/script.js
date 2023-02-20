@@ -161,67 +161,67 @@ window.addEventListener("DOMContentLoaded", () => {
 
   //MenuCards add
   class MenuCard {
-    constructor(img, title, descr, price, parentSelector, ...classes) {
-      this.img = img;
+    constructor(src, alt, title, descr, price, parentSelector, ...classes) {
+      this.src = src;
+      this.alt = alt;
       this.title = title;
       this.descr = descr;
       this.price = price;
-      this.parentSelector = document.querySelector(parentSelector);
       this.classes = classes;
+      this.parent = document.querySelector(parentSelector);
+      this.transfer = 27;
+      this.changeToUAH();
+    }
+    changeToUAH() {
+      this.price = this.price * this.transfer;
     }
     createMenu() {
-      const div = document.createElement("div");
+      const element = document.createElement("div");
+
       if (this.classes.length === 0) {
-        this.div = "menu__item";
-        div.classList.add(this.div);
+        this.classes = "menu__item";
+        element.classList.add(this.classes);
       } else {
-        this.classes.forEach((className) => div.classList.add(className));
+        this.classes.forEach((className) => element.classList.add(className));
       }
-      this.classes.forEach((className) => {
-        div.classList.add(className);
-      });
-      div.innerHTML = `
-      <img src=${this.img} alt="vegy" />
-      <h3 class="menu__item-subtitle">Меню "${this.title}"</h3>
-      <div class="menu__item-descr">
-        ${this.descr}
-      </div>
-      <div class="menu__item-divider"></div>
-      <div class="menu__item-price">
-        <div class="menu__item-cost">Цена:</div>
-        <div class="menu__item-total"><span>${this.price}</span> грн/день</div>
-      </div>
-    `;
-      this.parentSelector.append(div);
+
+      element.innerHTML = `
+          <img src=${this.src} alt=${this.alt}>
+          <h3 class="menu__item-subtitle">${this.title}</h3>
+          <div class="menu__item-descr">${this.descr}</div>
+          <div class="menu__item-divider"></div>
+          <div class="menu__item-price">
+              <div class="menu__item-cost">Цена:</div>
+              <div class="menu__item-total"><span>${this.price}</span> грн/день</div>
+          </div>
+      `;
+      this.parent.append(element);
     }
   }
-  new MenuCard(
-    "img/tabs/vegy.jpg",
-    "фитнес",
-    "Меню 'Фитнес' - это новый подход к приготовлению блюд: больше свежих овощей и фруктов. Продукт активных и здоровых людей. Это абсолютно новый продукт с оптимальной ценой и высоким качеством!",
-    229,
-    ".menu .container"
-  ).createMenu();
 
-  new MenuCard(
-    "img/tabs/elite.jpg",
-    "Премиум",
-    "В меню 'Премиум' мы используем не только красивый дизайн упаковки, но и качественное исполнение блюд. Красная рыба, морепродукты, фрукты - ресторанное меню без похода в ресторан!",
-    550,
-    ".menu .container",
-    "menu__item",
-    "big"
-  ).createMenu();
+  const getResource = async (url) => {
+    //нету никаких данных, потому что мы их получаем
+    const res = await fetch(url);
+    // если fetch столкнется с ошибкой в http-запросе, то он не выкенет reject. Поэтому, проверяем по условию
+    if (!res.ok) {
+      // если выдает неполадку (не ок)
+      throw new Error(`Could not fetch ${url}, status:${res.status}`);
+    }
+    return await res.json(); // тоже промис, он будет возвращен не сразу. поэтому так же пишем await
+  };
 
-  new MenuCard(
-    "img/tabs/post.jpg",
-    "Постное",
-    "Меню 'Постное' - это тщательный подбор ингредиентов: полное отсутствие продуктов животного происхождения, молоко из миндаля, овса, кокоса или гречки, правильное количество белков за счет тофу и импортных вегетарианских стейков.",
-    430,
-    ".menu .container",
-    "menu__item",
-    "big"
-  ).createMenu();
+  getResource("http://localhost:3000/menu").then((data) => {
+    data.forEach(({ img, altimg, title, descr, price }) => {
+      new MenuCard(
+        img,
+        altimg,
+        title,
+        descr,
+        price,
+        ".menu .container"
+      ).createMenu();
+    });
+  });
 
   // Forms (отправка формы на сервер)
 
@@ -236,10 +236,26 @@ window.addEventListener("DOMContentLoaded", () => {
 
   forms.forEach((item) => {
     // берем все формы и под каждую из них подвязываем функцию postData
-    postData(item);
+    bindPostData(item);
   });
 
-  function postData(form) {
+  const postData = async (url, data) => {
+    //настройка запроса  аргумент ссылки и данных, которые будут поститься.async- даем понять, что будет асинхронный код внутри функции
+    const res = await fetch(url, {
+      //в результат передаем fetch, который возвращает промис. Посылает запрос на сервер
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+      },
+      body: data,
+    });
+
+    return await res.json(); // тоже промис, он будет возвращен не сразу. поэтому так же пишем await
+  };
+
+  //когда запускаем функцию, начинает идти запрос, но из за того что тут стоит await, то необходимо дождаться результат этого запроса
+
+  function bindPostData(form) {
     // создвем функцию поста формы с аргументом, чтоб легче было делать события
     form.addEventListener("submit", (e) => {
       // e-для того, чтоб мы отменили стандартное поведение браузера(после отправки перезагружать)
@@ -258,14 +274,8 @@ window.addEventListener("DOMContentLoaded", () => {
         object[key] = value;
       });
 
-      fetch("server.php", {
-        method: "POST",
-        body: JSON.stringify(object),
-        headers: {
-          "Content-type": "application/json",
-        },
-      })
-        .then((data) => data.text()) // превращаем json в обычный текст
+      postData("http://localhost:3000/requests", JSON.stringify(object))
+        // .then((data) => data.text()) // превращаем json в обычный текст
         .then((data) => {
           console.log(data); // data- данные из промиса
           statusMessage.textContent = messages.success; // какое сообщение выводить
@@ -297,8 +307,4 @@ window.addEventListener("DOMContentLoaded", () => {
   // ) //туда, куда посылаем запрос
   //   .then((response) => response.json()) // fetch работает с промисами  получаем ответ в json виде и трансформируем в нормальный объект и response.json() возвращает промис
   //   .then((json) => console.log(json)); // если все успешно прошло, то берем этот сконвертированный объект и используем его в консоли
-
-  fetch("http://localhost:3000/menu") //отсюда возвращается промис, поэтому
-    .then((data) => data.json()) // берем data- что возвращает промис и превращаем его в обычный js-объект
-    .then((res) => console.log(res)); // и выводим полученный результат
 });
